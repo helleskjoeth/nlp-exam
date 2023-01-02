@@ -1,0 +1,97 @@
+---
+title: "NLP_survey_clean"
+author: "Julie Svinth Nielsen"
+date: '2022-12-19'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+```
+
+Loading required packages to clean data
+```{r}
+library(readr)
+library(tidyverse)
+library(reshape2)
+```
+
+Loading survey data
+```{r}
+
+survey <- read_csv("~/Uni stuff/NLP/survey.csv")
+
+```
+
+Creating dataframes with Condition A and Condition B
+```{r}
+# Condition A
+con_a <- filter(survey, condition == "Condition A")
+
+con_a <- con_a[, -c(46:85)]
+
+# Condition B
+con_b <- filter(survey, condition == "Condition B")
+con_b <- con_b[, -c(6:45)]
+
+
+write.csv(con_a, "con_a.csv", row.names = FALSE)
+write.csv(con_b, "con_b.csv", row.names = FALSE)
+```
+
+
+
+```{r}
+
+library(dplyr)
+
+
+
+
+```
+```{r}
+
+# Reshaping the dataframes to make them ready for the analysis
+
+con_a_long_format <- read_csv("~/Uni stuff/NLP/con_a_long_format.csv")
+
+
+con_a_long_format <- con_a_long_format[order(con_a_long_format$ID),]
+con_b_long_format <- read_csv("~/Uni stuff/NLP/con_b_long_format.csv")
+
+con_b_long_format <- con_b_long_format[order(con_b_long_format$ID),]
+
+
+# Rename column
+con_a_long_format <-rename(con_a_long_format, answer = real_song)
+con_b_long_format <-rename(con_b_long_format, answer = real_song)
+
+#Adding real song column
+con_a_long_format$real_song <- rep(c("B", "B", "A", "A", "A", "B", "A", "B", "B", "A"), 15)
+con_b_long_format$real_song <- rep(c("A", "B", "B", "A", "B", "A", "A", "B", "A", "B"), 17)
+
+
+#Remove "Lyrics" from answer column
+con_a_long_format$answer <- gsub("Lyrics ", "", con_a_long_format$answer)
+con_b_long_format$answer <- gsub("Lyrics ", "", con_b_long_format$answer)
+
+
+
+
+```
+
+```{r}
+
+
+# Combining the two dataframes
+df <- rbind(con_a_long_format, con_b_long_format)
+
+
+
+```
+
+
+
+

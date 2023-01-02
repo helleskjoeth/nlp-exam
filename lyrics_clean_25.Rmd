@@ -1,0 +1,93 @@
+---
+title: "lyrics_clean_20"
+author: "Julie Svinth Nielsen"
+date: '2022-12-14'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Loading the required packages to clean the data
+```{r}
+library(tidyverse)
+library(readr)
+library(stringr)
+```
+
+Loading the data
+```{r}
+lyrics_25 <- read_csv("~/Uni stuff/NLP/NLP_Exam/lyrics_25.csv")
+
+```
+
+
+Prepare for JSONL setup
+```{r}
+
+# Creating columns prompt and completion
+lyrics_25$prompt <- lyrics_25$song
+lyrics_25$completion <- lyrics_25$lyrics
+
+pro_com_25 <- cbind(prompt = lyrics_25$prompt, completion = lyrics_25$completion)
+
+# Remove punctuation from completion column
+pro_com_25$completion <- gsub("[^[:alnum:][:space:]']","",pro_com_25$completion)
+
+
+# Remove all unnecessary characters before the Verse 1
+pro_com_25 <- as.data.frame(pro_com_25)
+pro_com_25$completion <- gsub("^(.*)Intro", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("^(.*)Verse 1", "", pro_com_25$completion)
+
+```
+
+
+Cleaning lyrics to remove everything before the actual lyrics begin
+```{r}
+
+
+pro_com_25$completion <- gsub("Justin Timberlake", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Meghan Trainor", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Justin Bieber", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Lizzo", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Ludacris", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Messy Mya", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Justin Vernon", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Katy Perry", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Ariana Grande", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Jason Derulo", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Juicy J", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Mabel", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Louis", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Harry", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Liam", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Sporty Scary", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Baby Scary", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Flo Rida", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Ryan Tedder", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Nick Jonas", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Joe Jonas", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Lady Gaga", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Beyoncé", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Timbaland", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Kojo Funds with", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("R Kelly", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Cardi B", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Sage de Gemini", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Ne Yo", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Ty Dolla ign", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Taylor Swift", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("Chris Stapleton", "", pro_com_25$completion)
+pro_com_25$completion <- gsub("John Legend", "", pro_com_25$completion)
+
+```
+
+Write CSV file with the cleaned dta
+```{r}
+write.csv(pro_com_25, "C:/Users/julie/OneDrive/Dokumenter/Uni stuff/NLP/NLP_Exam/pro_com_25_clean.csv", row.names=FALSE)
+```
+
+
+
