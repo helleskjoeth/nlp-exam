@@ -1,0 +1,287 @@
+---
+title: "NLP data"
+author: "Helle"
+date: '2022-12-19'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# load packages 
+library(tidyverse)
+library(lme4)
+library(dplyr)
+library(lmerTest)
+```
+
+## Load data and clean it 
+
+```{r}
+#load datasets 
+
+con_a <- read.csv("con_a_long_format.csv", header = T) #fintetuned songs
+con_b <- read.csv("con_b_long_format.csv", header = T) #untrained songs 
+
+```
+
+```{r}
+#Remove helletest  and hej34 (Julie) and hjl23
+con_a <- con_a %>% 
+  filter(ID != 'helletest')
+
+con_b <- con_b %>% 
+  filter((ID != 'hej34'))
+
+
+con_b <- con_b %>% 
+  filter((ID != 'hjl23'))
+
+
+#rename real_song to answer to not confuse ourselves in both df's
+con_a <- con_a %>% 
+  rename("answer" = "real_song")
+
+con_b <- con_b %>% 
+  rename("answer" = "real_song")
+
+```
+
+
+## create column for which song is correct 
+
+```{r}
+#condition a
+con_a_real_song <- c('B', 'B', 'A', 'A', 'A', 'B', 'A', 'B', 'B', 'A' )
+song_number <- list(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+
+#make datefram
+song_no_df_a <- cbind(con_a_real_song, song_number)
+
+#merge to con_a
+con_a <- merge(con_a, song_no_df_a, by = "song_number")
+
+#rename
+con_a <- con_a %>% 
+  rename("real_song" = "con_a_real_song")
+
+
+#condition b
+con_b_real_song <- c('A', 'B', 'B', 'A', 'B', 'A', 'A', 'B', 'A', 'B')
+
+#make dataframe
+song_no_df_b <- cbind(con_b_real_song, song_number)
+
+#merge to con_b
+con_b <- merge(con_b, song_no_df_b, by = "song_number")
+
+#rename
+con_b <- con_b %>% 
+  rename("real_song" = "con_b_real_song")
+
+```
+
+## combine datasets
+
+```{r}
+df <- rbind(con_a, con_b)
+
+```
+
+
+## Rename values in answer column and make a 'correct' column 
+
+
+```{r}
+#rename so they match values with 'Real song' column
+df$answer[df$answer == "Lyrics A"] <- 'A'
+df$answer[df$answer == "Lyrics B"] <- 'B'
+
+
+#create a column for correct answers
+
+df <- df %>% 
+  mutate(
+    correct = ifelse(answer == real_song, 1, 0)
+  )
+
+
+#create column for which song participants preferred - did they prefer the human song or the AI song
+#rename so they match values with 'Real song' column
+df$prefer[df$prefer == "Lyrics A"] <- 'A'
+df$prefer[df$prefer == "Lyrics B"] <- 'B'
+df$system <- ifelse(df$prefer == df$real_song, "human", "machine")
+df$system <- as.factor(df$system)
+
+df$system_numeric <- ifelse(df$system == "machine", 1, 0)
+
+#Create column which indicates whether their answer (which song they think is human made) is also the one they prefer
+df$overlap <- ifelse(df$answer == df$prefer, 1, 0)
+#1 means they preferred the song, they thought was the real one, 0 if they preferred the one they though was AI made. 
+
+
+
+```
+
+
+```{r}
+df$real_song <- unlist(df$real_song)
+```
+
+
+
+
+```{r}
+#save df
+write.csv(df, "clean_df.csv", row.names = F)
+
+
+```
+
+
+#Load data
+
+```{r}
+df <- read.csv("clean_df.csv")
+```
+
+
+## Run analysis for H1
+
+```{r}
+# Test whether there is a higher probability of correctly choosing the ‘real’ song, if you are in condition B - if you see the untrained songs vs. the real songs. 
+
+h1 <- glmer(correct ~ condition + (1| ID) + (1|song_number), df, family = binomial(link = 'logit'))
+
+summary(h1)
+
+#Calculate % accuracy per condition
+A <- df %>% filter(condition == "Condition A") 
+sum(A$correct)/length(A$correct)*100 #53.57% accuracy for fine-tuned songs 
+
+
+B <- df %>% filter(condition == "Condition B")
+sum(B$correct)/length(B$correct)*100 #55.33 accuracy for untrained songs 
+
+
+h1_plot <- df %>% 
+  ggplot( aes(x=condition, y = (correct*100), fill=condition)) + 
+  geom_bar(width = .4, stat = 'summary') + 
+  geom_errorbar(stat = "summary", fun.data = "mean_se", width = .2) +
+  xlab("Condition") +
+  ylab('Mean % of real songs correctly chosen') +
+  scale_fill_manual(values=c("#884EA0", "#229954"), name="Condition", labels= c("A: Fine-tuned songs", "B: Untrained songs")) +
+  theme_minimal()
+
+
+h1_plot
+
+
+```
+
+## Test H2 
+
+```{r}
+library(MASS)
+df$confidence <- as.factor(df$confidence)
+df$ID <- as.factor(df$ID)
+df$recognize <- as.factor(df$recognize)
+
+
+h2 <- polr(confidence ~condition + recognize, df, Hess = TRUE, method = "logistic")
+
+summary(h2)
+
+
+#plot
+library(effects)
+
+plot(effects::allEffects(h2))
+
+
+df %>% 
+  ggplot( aes(x=confidence, fill=condition)) + 
+  geom_bar(width = .5, position = 'dodge') + 
+  xlab("Confidence") +
+  ylab ("Count") +
+  scale_fill_manual(values=c("#884EA0", "#229954"), name="Condition", labels= c("A: Fine-tuned songs", "B: Untrained songs")) +
+  theme_minimal()
+
+
+```
+#Test H3 - Preferance 
+
+```{r}
+df$condition <- as.factor(df$condition)
+h3 <- glmer(system_numeric ~ condition + (1| ID) + (1| song_number), data = df, family = binomial(link = logit) )
+  
+summary(h3)
+
+boot::inv.logit(-0.19) #45.3% of machine for condition A
+boot::inv.logit(0.1873) #55.7% of machine for condition B 
+
+
+library(effects)
+
+plot(effects::allEffects(h3))
+
+
+h3_plot <- df %>% 
+  ggplot(aes(x = as.factor(condition), y = (system_numeric*100), fill = condition))+
+  geom_bar(width = .5, stat = "summary")+
+  geom_errorbar(stat = "summary", fun.data = "mean_se", width = .2) + 
+  theme_minimal()+
+  xlab("Condition") + ylab("% of GPT-3 produced songs that were preferred") +
+  scale_fill_manual(values=c("#884EA0", "#229954"), name="Condition", labels= c("A: Fine-tuned songs", "B: Untrained songs")) 
+
+
+h3_plot
+
+
+overlaps <- sum(df$overlap)/length(df$overlap)*100
+
+overlaps
+
+```
+
+
+
+
+
+#Info for methods section
+
+```{r}
+#number of participants in total
+length(unique(df$ID)) #29
+
+#condition a
+length(unique(con_a$ID)) #14 
+
+#gender
+male <- df %>% filter(gender == "Male")
+length(unique(male$ID)) #11
+
+female <- df %>% filter(gender == "Female")
+length(unique(female$ID)) #18
+
+#age 
+min(df$age) #17
+max(df$age) #59
+
+mean(df$age) #27.1
+sd(df$age) #10.22
+
+#age across conditions 
+mean(con_a$age) #26.21
+mean(con_b$age) #27.93
+
+
+```
+
+
+
+
+
+
